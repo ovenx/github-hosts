@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,9 +10,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"errors"
 )
-var domains = []string {
+
+var domains = []string{
 	"github.com",
 	"gist.github.com",
 	"assets-cdn.github.com",
@@ -34,7 +35,7 @@ var domains = []string {
 var startTag = "# GitHub Start\r\n"
 var endTag = "# GitHub End\r\n"
 
-func main () {
+func main() {
 	var mode int
 	fmt.Println("1. Create the host file to current directory (default)")
 	fmt.Println("2. Append the host to system host file in linux (/etc/hosts)")
@@ -68,13 +69,13 @@ func main () {
 		os.Exit(-1)
 	}
 	defer in.Close()
-	reader  := bufio.NewReader(in)
+	reader := bufio.NewReader(in)
 	var strSlice []string
 	line := 0
 	startLine := 0
 	endLine := 0
 	for {
-		line = line+1
+		line = line + 1
 		str, err := reader.ReadString('\n')
 		if err == io.EOF {
 			break
@@ -97,11 +98,11 @@ func main () {
 
 type HostChan struct {
 	Domain string
-	Ip string
-	Err error
+	Ip     string
+	Err    error
 }
 
-func WriteHostToFile (str string, filePath string) {
+func WriteHostToFile(str string, filePath string) {
 	str += startTag
 	ch := make(chan *HostChan)
 	for _, v := range domains {
@@ -112,18 +113,18 @@ func WriteHostToFile (str string, filePath string) {
 	for range domains {
 		chRec := <-ch
 		if chRec.Err != nil {
-			fmt.Println(chRec.Err.Error()+" "+chRec.Domain)
+			fmt.Println(chRec.Err.Error() + " " + chRec.Domain)
 			return
 		}
 		hostMap[chRec.Domain] = chRec.Ip
 		fmt.Println(chRec.Ip + " " + chRec.Domain)
 	}
 	for _, v := range domains {
-		str += hostMap[v] + " " + v +"\r\n"
+		str += hostMap[v] + " " + v + "\r\n"
 	}
 
 	str += endTag
-	out, err := os.OpenFile(filePath, os.O_WRONLY | os.O_TRUNC | os.O_CREATE, 0666)
+	out, err := os.OpenFile(filePath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0666)
 	if err != nil {
 		fmt.Println("open file fail:", err)
 		return
@@ -149,7 +150,7 @@ func Copy(dstName, srcName string) (written int64, err error) {
 	return io.Copy(dst, src)
 }
 
-func httpPostForm(domain string, ch chan<-*HostChan) {
+func httpPostForm(domain string, ch chan<- *HostChan) {
 	resp, err := http.PostForm("https://www.ipaddress.com/ip-lookup", url.Values{"host": {domain}})
 	if err != nil {
 		ch <- &HostChan{Domain: domain, Err: err}
@@ -161,19 +162,19 @@ func httpPostForm(domain string, ch chan<-*HostChan) {
 		ch <- &HostChan{Domain: domain, Err: err}
 		return
 	}
-	shortStr := string(body)[10000 : 30000]
+	shortStr := string(body)[10000:30000]
 	index := strings.Index(shortStr, " ("+domain+")")
 	var res string
 	if index > 0 {
 		strStart := "IP Lookup : "
 		indexStart := strings.Index(shortStr, strStart)
-		res = shortStr[indexStart+len(strStart):index]
+		res = shortStr[indexStart+len(strStart) : index]
 	} else {
 		strStart := "<input name=\"host\" type=\"radio\" value=\""
 		indexStart := strings.Index(shortStr, strStart)
-		indexEnd := strings.Index(shortStr[indexStart+len(strStart): indexStart+len(strStart)+100], "\"")
+		indexEnd := strings.Index(shortStr[indexStart+len(strStart):indexStart+len(strStart)+100], "\"")
 		if indexEnd > 0 {
-			res = shortStr[indexStart+len(strStart):indexStart+len(strStart)+indexEnd]
+			res = shortStr[indexStart+len(strStart) : indexStart+len(strStart)+indexEnd]
 		} else {
 			ch <- &HostChan{Domain: domain, Err: errors.New("get indexEnd error")}
 		}
