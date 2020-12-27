@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"errors"
 )
 var domains = []string {
 	"github.com",
@@ -94,23 +95,28 @@ func main () {
 	WriteHostToFile(str, filePath)
 }
 
+type HostChan struct {
+	Domain string
+	Ip string
+	Err error
+}
+
 func WriteHostToFile (str string, filePath string) {
 	str += startTag
-	ch := make(chan string)
+	ch := make(chan *HostChan)
 	for _, v := range domains {
 		go httpPostForm(v, ch)
 	}
 	fmt.Println("================\nstart get host：\n================")
 	hostMap := make(map[string]string)
 	for range domains {
-		strLine := <-ch
-		if strLine == "" {
-			fmt.Println("get host error")
+		chRec := <-ch
+		if chRec.Err != nil {
+			fmt.Println(chRec.Err.Error()+" "+chRec.Domain)
 			return
 		}
-		strArr := strings.Split(strLine, " ")
-		hostMap[strArr[1]] = strArr[0]
-		fmt.Println(strLine)
+		hostMap[chRec.Domain] = chRec.Ip
+		fmt.Println(chRec.Ip + " " + chRec.Domain)
 	}
 	for _, v := range domains {
 		str += hostMap[v] + " " + v +"\r\n"
@@ -143,18 +149,20 @@ func Copy(dstName, srcName string) (written int64, err error) {
 	return io.Copy(dst, src)
 }
 
-func httpPostForm(host string, ch chan<-string) {
-	resp, err := http.PostForm("https://www.ipaddress.com/ip-lookup", url.Values{"host": {host}})
+func httpPostForm(domain string, ch chan<-*HostChan) {
+	resp, err := http.PostForm("https://www.ipaddress.com/ip-lookup", url.Values{"host": {domain}})
 	if err != nil {
+		ch <- &HostChan{Domain: domain, Err: err}
 		return
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		ch <- &HostChan{Domain: domain, Err: err}
 		return
 	}
 	shortStr := string(body)[10000 : 30000]
-	index := strings.Index(shortStr, " ("+host+")")
+	index := strings.Index(shortStr, " ("+domain+")")
 	var res string
 	if index > 0 {
 		strStart := "IP Lookup : "
@@ -164,10 +172,16 @@ func httpPostForm(host string, ch chan<-string) {
 		strStart := "<input name=\"host\" type=\"radio\" value=\""
 		indexStart := strings.Index(shortStr, strStart)
 		indexEnd := strings.Index(shortStr[indexStart+len(strStart): indexStart+len(strStart)+100], "\"")
-		res = shortStr[indexStart+len(strStart):indexStart+len(strStart)+indexEnd]
+		if indexEnd > 0 {
+			res = shortStr[indexStart+len(strStart):indexStart+len(strStart)+indexEnd]
+		} else {
+			ch <- &HostChan{Domain: domain, Err: errors.New("get indexEnd error")}
+		}
 	}
 	if res == "" {
+		ch <- &HostChan{Domain: domain, Err: errors.New("empty host")}
 		return
 	}
-	ch <- res + " " + host
+	ch <- &HostChan{Domain: domain, Ip: res, Err: nil}
+	return
 }
