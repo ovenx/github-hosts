@@ -1,6 +1,7 @@
-## github 域名国内加速 20201227
+## github 域名国内加速 
 
 ```bash
+# updated by 20201227
 # GitHub Start
 140.82.112.3 github.com
 140.82.112.3 gist.github.com
@@ -20,4 +21,14 @@
 199.232.96.133 avatars8.githubusercontent.com
 185.199.109.154 github.githubassets.com
 # GitHub End
+```
+
+如何使用：
+```bash
+go run main.go
+
+# 可以选择 3 种方式保存
+#1. Create the host file to current directory (default)")
+#2. Append the host to system host file in linux (/etc/hosts)")
+#3. Append the host to system host file in windows (/mnt/c/Windows/System32/drivers/etc/hosts)")
 ```
