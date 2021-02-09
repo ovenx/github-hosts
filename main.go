@@ -20,6 +20,7 @@ var domains = []string{
 	"gist.githubusercontent.com",
 	"cloud.githubusercontent.com",
 	"camo.githubusercontent.com",
+	"avatars.githubusercontent.com",
 	"avatars0.githubusercontent.com",
 	"avatars1.githubusercontent.com",
 	"avatars2.githubusercontent.com",
@@ -162,7 +163,7 @@ func httpPostForm(domain string, ch chan<- *HostChan) {
 		ch <- &HostChan{Domain: domain, Err: err}
 		return
 	}
-	shortStr := string(body)[10000:30000]
+	shortStr := string(body)[12000:30000]
 	index := strings.Index(shortStr, " ("+domain+")")
 	var res string
 	if index > 0 {
