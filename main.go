@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
 )
@@ -152,7 +151,11 @@ func Copy(dstName, srcName string) (written int64, err error) {
 }
 
 func httpPostForm(domain string, ch chan<- *HostChan) {
-	resp, err := http.PostForm("https://www.ipaddress.com/ip-lookup", url.Values{"host": {domain}})
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", "https://www.ipaddress.com/ip-lookup", strings.NewReader("host="+domain))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("UserAgent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+	resp, err := client.Do(req)
 	if err != nil {
 		ch <- &HostChan{Domain: domain, Err: err}
 		return
